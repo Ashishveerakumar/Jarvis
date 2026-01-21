@@ -27,19 +27,26 @@ class VectorDBService:
     
     def _initialize_client(self):
         """Initialize Pinecone client and ensure index exists"""
-        if not settings.pinecone_api_key:
+        if not settings.pinecone_api_key or settings.pinecone_api_key == "your-pinecone-api-key":
             print("Warning: Pinecone API key not set. Vector DB features disabled.")
+            print("To enable knowledge base, set PINECONE_API_KEY in .env file")
             return
         
-        print("Initializing Pinecone client...")
-        self._client = Pinecone(api_key=settings.pinecone_api_key)
-        
-        # Check if index exists, create if not
-        self._ensure_index_exists()
-        
-        # Connect to the index
-        self._index = self._client.Index(settings.pinecone_index_name)
-        print(f"Connected to Pinecone index: {settings.pinecone_index_name}")
+        try:
+            print("Initializing Pinecone client...")
+            self._client = Pinecone(api_key=settings.pinecone_api_key)
+            
+            # Check if index exists, create if not
+            self._ensure_index_exists()
+            
+            # Connect to the index
+            self._index = self._client.Index(settings.pinecone_index_name)
+            print(f"Connected to Pinecone index: {settings.pinecone_index_name}")
+        except Exception as e:
+            print(f"Warning: Could not connect to Pinecone: {e}")
+            print("Vector DB features will be disabled. Chat will still work.")
+            self._client = None
+            self._index = None
     
     def _ensure_index_exists(self):
         """Create the index if it doesn't exist"""

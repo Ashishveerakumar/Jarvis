@@ -1,5 +1,5 @@
 """
-Streamlit Chatbot UI for Personal Assistant
+Streamlit Chatbot UI for JARVIS AI Assistant
 """
 import streamlit as st
 import requests
@@ -9,41 +9,169 @@ from typing import Optional
 
 
 # Configuration
-API_BASE_URL = "http://localhost:8000/api/v1"
+API_BASE_URL = "http://localhost:9000/api/v1"
 
 
 # Page configuration
 st.set_page_config(
-    page_title="Personal Assistant",
-    page_icon="🤖",
+    page_title="JARVIS AI Assistant",
+    page_icon="🌐",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for better chat appearance
+# Custom CSS for modern dark theme
 st.markdown("""
 <style>
-    .stChatMessage {
-        padding: 1rem;
-        border-radius: 0.5rem;
+    /* Dark theme with gradients */
+    .stApp {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+    
+    /* Header styling */
+    .main-header {
+        background: linear-gradient(90deg, #0f3460 0%, #16213e 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        border: 2px solid #53a8b6;
+        box-shadow: 0 8px 32px rgba(83, 168, 182, 0.3);
+    }
+    
+    .main-title {
+        color: #53a8b6;
+        font-size: 2.5rem;
+        font-weight: bold;
+        text-align: center;
+        text-shadow: 0 0 20px rgba(83, 168, 182, 0.5);
         margin-bottom: 0.5rem;
     }
-    .user-message {
-        background-color: #e3f2fd;
+    
+    .sub-title {
+        color: #e94560;
+        text-align: center;
+        font-size: 1.1rem;
     }
-    .assistant-message {
-        background-color: #f5f5f5;
+    
+    /* Chat message styling */
+    .stChatMessage {
+        background: rgba(15, 52, 96, 0.6) !important;
+        border: 1px solid #53a8b6;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     }
-    .source-badge {
+    
+    [data-testid="stChatMessageContent"] {
+        color: #f0f0f0 !important;
+    }
+    
+    /* User message */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+        background: linear-gradient(135deg, #e94560 0%, #c72c41 100%) !important;
+        border-color: #e94560;
+    }
+    
+    /* Assistant message */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+        background: linear-gradient(135deg, #0f3460 0%, #16213e 100%) !important;
+        border-color: #53a8b6;
+    }
+    
+    /* Input box */
+    .stChatInputContainer {
+        background: rgba(15, 52, 96, 0.8);
+        border-radius: 25px;
+        border: 2px solid #53a8b6;
+        padding: 0.5rem;
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f3460 0%, #1a1a2e 100%);
+        border-right: 2px solid #53a8b6;
+    }
+    
+    [data-testid="stSidebar"] .element-container {
+        color: #f0f0f0;
+    }
+    
+    /* Buttons */
+    .stButton button {
+        background: linear-gradient(90deg, #53a8b6 0%, #0f3460 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.5rem 2rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 16px rgba(83, 168, 182, 0.3);
+    }
+    
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(83, 168, 182, 0.5);
+    }
+    
+    /* Status badges */
+    .status-badge {
         display: inline-block;
-        padding: 0.2rem 0.5rem;
-        margin: 0.2rem;
-        background-color: #e8f5e9;
-        border-radius: 0.25rem;
-        font-size: 0.8rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+        margin: 0.5rem;
+        background: linear-gradient(90deg, #53a8b6 0%, #0f3460 100%);
+        border: 1px solid #53a8b6;
+        color: white;
+        box-shadow: 0 4px 12px rgba(83, 168, 182, 0.3);
     }
-    .stSidebar {
-        background-color: #fafafa;
+    
+    .source-chip {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        margin: 0.3rem;
+        background: rgba(83, 168, 182, 0.2);
+        border: 1px solid #53a8b6;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        color: #53a8b6;
+    }
+    
+    /* Metrics */
+    [data-testid="stMetricValue"] {
+        color: #53a8b6 !important;
+        font-size: 2rem !important;
+        font-weight: bold !important;
+    }
+    
+    /* Info boxes */
+    .stAlert {
+        background: rgba(15, 52, 96, 0.6);
+        border: 1px solid #53a8b6;
+        border-radius: 10px;
+        color: #f0f0f0;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(15, 52, 96, 0.6);
+        border-radius: 10px;
+        padding: 0.5rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        color: #53a8b6;
+        font-weight: bold;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: rgba(15, 52, 96, 0.6);
+        border-radius: 10px;
+        color: #53a8b6 !important;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -161,42 +289,50 @@ def get_knowledge_stats() -> dict:
 def render_sidebar():
     """Render the sidebar with settings and knowledge management"""
     with st.sidebar:
-        st.title("⚙️ Settings")
+        # Title with emoji
+        st.markdown("### 🌐 JARVIS Control Panel")
+        st.markdown("---")
         
-        # API Status
-        st.subheader("API Status")
+        # API Status with custom badges
+        st.markdown("#### System Status")
         health = check_api_health()
         if health:
-            st.success("✅ Connected")
+            st.markdown('<div class="status-badge">🟢 System Online</div>', unsafe_allow_html=True)
+            
+            # Status grid
             col1, col2 = st.columns(2)
             with col1:
                 if health.get("llm_loaded"):
-                    st.write("🧠 LLM: Ready")
+                    st.markdown("**🧠 AI Brain**")
+                    st.success("Active")
                 else:
-                    st.write("🧠 LLM: Not loaded")
+                    st.markdown("**🧠 AI Brain**")
+                    st.error("Inactive")
             with col2:
                 if health.get("vector_db_connected"):
-                    st.write("📊 DB: Connected")
+                    st.markdown("**💾 Memory**")
+                    st.success("Connected")
                 else:
-                    st.write("📊 DB: Offline")
+                    st.markdown("**💾 Memory**")
+                    st.warning("Offline")
             st.session_state.api_connected = True
         else:
-            st.error("❌ API Offline")
+            st.markdown('<div class="status-badge" style="background: linear-gradient(90deg, #e94560 0%, #c72c41 100%);">🔴 System Offline</div>', unsafe_allow_html=True)
             st.session_state.api_connected = False
         
-        st.divider()
+        st.markdown("---")
         
         # Knowledge Base Settings
-        st.subheader("📚 Knowledge Base")
+        st.markdown("#### 🗄️ Knowledge Configuration")
         
         st.session_state.use_knowledge_base = st.toggle(
-            "Use Knowledge Base",
+            "Enable Memory Retrieval",
             value=st.session_state.use_knowledge_base,
-            help="Enable/disable context retrieval from knowledge base"
+            help="Access stored knowledge for contextual responses"
         )
         
         st.session_state.category_filter = st.text_input(
-            "Category Filter",
+            "🏷️ Filter Category",
             value=st.session_state.category_filter or "",
             placeholder="Filter by category",
             help="Only search documents with this category"
@@ -204,63 +340,71 @@ def render_sidebar():
         
         # Knowledge base stats
         if st.session_state.api_connected:
-            with st.expander("📊 Knowledge Base Stats"):
+            with st.expander("📊 Memory Analytics"):
                 stats = get_knowledge_stats()
                 if "error" not in stats:
-                    st.metric("Total Vectors", stats.get("total_vectors", 0))
-                    st.metric("Dimension", stats.get("dimension", 0))
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("📚 Vectors", stats.get("total_vectors", 0))
+                    with col2:
+                        st.metric("🔢 Dimensions", stats.get("dimension", 0))
                 else:
-                    st.write("Could not load stats")
+                    st.write("⚠️ Analytics unavailable")
         
-        st.divider()
+        st.markdown("---")
         
         # Document Ingestion
-        st.subheader("📄 Add Knowledge")
+        st.markdown("#### 📥 Add New Knowledge")
         
-        with st.expander("Add Document"):
+        with st.expander("Upload Document"):
             doc_text = st.text_area(
-                "Document Text",
-                height=150,
-                placeholder="Paste your document content here..."
+                "📝 Content",
+                height=120,
+                placeholder="Enter document content..."
             )
             doc_source = st.text_input(
-                "Source Name",
-                placeholder="e.g., meeting_notes_2024"
+                "🏷️ Source ID",
+                placeholder="document_name_001"
             )
             doc_category = st.text_input(
-                "Category",
-                placeholder="e.g., meetings, research, notes"
+                "📂 Category",
+                placeholder="research | notes | docs"
             )
             
-            if st.button("Add to Knowledge Base", type="primary"):
+            if st.button("⬆️ Upload to Memory", type="primary", use_container_width=True):
                 if doc_text and doc_source:
-                    with st.spinner("Ingesting document..."):
+                    with st.spinner("Processing..."):
                         result = ingest_document(
                             doc_text,
                             doc_source,
                             doc_category if doc_category else None
                         )
                         if "error" in result:
-                            st.error(result["error"])
+                            st.error(f"❌ {result['error']}")
                         else:
-                            st.success(f"✅ Added {result['chunks_created']} chunks")
+                            st.success(f"✅ Stored {result['chunks_created']} chunks")
                 else:
-                    st.warning("Please provide both text and source name")
+                    st.warning("⚠️ Content and Source required")
         
-        st.divider()
+        st.markdown("---")
         
         # Chat Controls
-        st.subheader("💬 Chat Controls")
+        st.markdown("#### 🎮 Chat Controls")
         
-        if st.button("🗑️ Clear Chat History"):
+        if st.button("🗑️ Clear History", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
 
 
 def render_chat():
     """Render the main chat interface"""
-    st.title("🤖 Personal Assistant")
-    st.caption("Powered by self-hosted LLaMA with Pinecone knowledge retrieval")
+    # Custom header
+    st.markdown("""
+        <div class="main-header">
+            <div class="main-title">⚡ JARVIS AI ASSISTANT ⚡</div>
+            <div class="sub-title">Powered by LLaMA • Enhanced with Vector Memory</div>
+        </div>
+    """, unsafe_allow_html=True)
     
     # Display chat messages
     for message in st.session_state.messages:
@@ -269,16 +413,17 @@ def render_chat():
             
             # Show sources if available
             if message.get("sources"):
-                with st.expander("📚 Sources"):
-                    for source in message["sources"]:
-                        st.markdown(
-                            f"<span class='source-badge'>{source['source']} "
-                            f"(relevance: {source['relevance']:.2f})</span>",
-                            unsafe_allow_html=True
-                        )
+                st.markdown("---")
+                st.markdown("**📚 Knowledge Sources:**")
+                for source in message["sources"]:
+                    st.markdown(
+                        f'<span class="source-chip">{source["source"]} '
+                        f'• Score: {source["relevance"]:.2f}</span>',
+                        unsafe_allow_html=True
+                    )
     
     # Chat input
-    if prompt := st.chat_input("Ask me anything...", disabled=not st.session_state.api_connected):
+    if prompt := st.chat_input("💬 Ask JARVIS anything...", disabled=not st.session_state.api_connected):
         # Add user message to chat
         st.session_state.messages.append({
             "role": "user",
@@ -290,25 +435,27 @@ def render_chat():
         
         # Get assistant response
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
+            with st.spinner("🤔 Processing..."):
                 response = send_message(prompt)
                 
                 if "error" in response:
-                    st.error(response["error"])
-                    assistant_message = f"Sorry, I encountered an error: {response['error']}"
+                    st.error(f"⚠️ {response['error']}")
+                    assistant_message = f"System Error: {response['error']}"
                 else:
-                    assistant_message = response.get("response", "I couldn't generate a response.")
+                    assistant_message = response.get("response", "Unable to generate response.")
                     st.markdown(assistant_message)
                     
                     # Show sources if used
                     sources = response.get("sources", [])
                     if sources and response.get("context_used"):
-                        with st.expander("📚 Sources"):
-                            for source in sources:
-                                st.markdown(
-                                    f"**{source['source']}** - "
-                                    f"Relevance: {source['relevance']:.2f}"
-                                )
+                        st.markdown("---")
+                        st.markdown("**📚 Knowledge Sources:**")
+                        for source in sources:
+                            st.markdown(
+                                f'<span class="source-chip">{source["source"]} '
+                                f'• Score: {source["relevance"]:.2f}</span>',
+                                unsafe_allow_html=True
+                            )
                 
                 # Add assistant message to history
                 st.session_state.messages.append({
@@ -320,40 +467,60 @@ def render_chat():
     # Show welcome message if no messages
     if not st.session_state.messages:
         st.info(
-            "👋 Welcome! I'm your personal assistant powered by a self-hosted LLaMA model. "
-            "I can answer questions and use the knowledge base to provide context-aware responses. "
-            "Try adding some documents to the knowledge base using the sidebar!"
+            "👋 **Welcome to JARVIS AI Assistant!**\n\n"
+            "I'm an advanced AI powered by a self-hosted LLaMA model with vector memory capabilities. "
+            "I can answer questions, retrieve knowledge, and provide intelligent responses.\n\n"
+            "💡 **Quick Start:**\n"
+            "- Open the sidebar (←) to add knowledge documents\n"
+            "- Toggle Memory Retrieval to use stored knowledge\n"
+            "- Start chatting with me right away!"
         )
 
 
 def render_search_tab():
     """Render the knowledge search interface"""
-    st.title("🔍 Knowledge Base Search")
+    st.markdown("""
+        <div class="main-header">
+            <div class="main-title">🔍 MEMORY SEARCH</div>
+            <div class="sub-title">Advanced Vector Database Query System</div>
+        </div>
+    """, unsafe_allow_html=True)
     
     search_query = st.text_input(
-        "Search Query",
-        placeholder="Enter your search query..."
+        "🔎 Search Query",
+        placeholder="Enter keywords to search the knowledge base...",
+        label_visibility="collapsed"
     )
     
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        top_k = st.number_input("Results", min_value=1, max_value=20, value=5)
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col2:
+        top_k = st.number_input("📊 Max Results", min_value=1, max_value=20, value=5)
+    with col3:
+        st.write("")
+        st.write("")
+        search_btn = st.button("🚀 Search", type="primary", use_container_width=True)
     
-    if st.button("Search", type="primary") and search_query:
-        with st.spinner("Searching..."):
+    if search_btn and search_query:
+        with st.spinner("🔍 Scanning memory..."):
             results = search_knowledge(search_query, top_k)
             
             if "error" in results:
-                st.error(results["error"])
+                st.error(f"⚠️ {results['error']}")
             else:
-                st.subheader(f"Results ({results['total_results']} found)")
+                st.success(f"✅ Found {results['total_results']} results")
+                st.markdown("---")
                 
                 for i, result in enumerate(results.get("results", []), 1):
-                    with st.expander(f"Result {i} - Score: {result['score']:.3f}"):
-                        st.write(f"**Source:** {result.get('source', 'Unknown')}")
-                        st.write(f"**ID:** {result['id']}")
+                    with st.expander(f"🎯 Result #{i} • Relevance: {result['score']:.3f}"):
+                        col1, col2 = st.columns([1, 3])
+                        with col1:
+                            st.markdown(f"**📁 Source:**")
+                            st.markdown(f"**🆔 ID:**")
+                        with col2:
+                            st.markdown(f"`{result.get('source', 'Unknown')}`")
+                            st.markdown(f"`{result['id']}`")
                         st.markdown("---")
-                        st.write(result["text"])
+                        st.markdown(result["text"])
 
 
 def main():
@@ -364,7 +531,7 @@ def main():
     render_sidebar()
     
     # Main content with tabs
-    tab1, tab2 = st.tabs(["💬 Chat", "🔍 Search Knowledge"])
+    tab1, tab2 = st.tabs(["💬 Chat Interface", "🔍 Memory Search"])
     
     with tab1:
         render_chat()

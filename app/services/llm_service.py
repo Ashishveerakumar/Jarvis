@@ -25,12 +25,24 @@ class LLMService:
         """Check connection to Ollama server"""
         try:
             # Try to list models to check connection
-            models = ollama.list()
+            models_response = ollama.list()
             self._is_connected = True
-            print(f"Connected to Ollama. Available models: {[m['name'] for m in models.get('models', [])]}")
+            
+            # Handle both old and new Ollama API response formats
+            models_list = models_response.get('models', []) if isinstance(models_response, dict) else getattr(models_response, 'models', [])
+            model_names = []
+            for m in models_list:
+                # Handle both dict and object formats
+                if isinstance(m, dict):
+                    name = m.get('name') or m.get('model', '')
+                else:
+                    name = getattr(m, 'name', '') or getattr(m, 'model', '')
+                if name:
+                    model_names.append(name)
+            
+            print(f"Connected to Ollama. Available models: {model_names}")
             
             # Check if the configured model is available
-            model_names = [m['name'] for m in models.get('models', [])]
             if settings.ollama_model not in model_names and f"{settings.ollama_model}:latest" not in model_names:
                 print(f"Warning: Model '{settings.ollama_model}' not found. Available: {model_names}")
                 print(f"Run 'ollama pull {settings.ollama_model}' to download it.")
